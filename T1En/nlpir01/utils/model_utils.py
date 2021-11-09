@@ -14,9 +14,10 @@ from utils.global_parameters import EMBEDDING_SIZE, BATCH_SIZE, EPOCHS
 
 
 def run_model_binary(model, x_train, y_train, x_test, y_test,
-    batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
+                     batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
 
-    history = model.fit(x_train, y_train, batch_size, epochs, validation_split=0.2, verbose=verbose)
+    history = model.fit(x_train, y_train, batch_size, epochs,
+                        validation_split=0.2, verbose=verbose)
 
     if y_test is not None:
         loss, accuracy = model.evaluate(x_test, y_test, verbose=verbose)
@@ -32,7 +33,8 @@ def run_model_binary(model, x_train, y_train, x_test, y_test,
 
 
 def fit_model_binary(model, x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
-    history = model.fit(x_train, y_train, batch_size, epochs, validation_split=0.2, verbose=verbose)
+    history = model.fit(x_train, y_train, batch_size, epochs,
+                        validation_split=0.2, verbose=verbose)
     history_dict = history.history
     return model, history_dict
 
@@ -55,9 +57,10 @@ def class_of(binary_raw_value):
         return 1
 
 
-def export_results(test_df, predictions, results_path, results_file_prefix, run_id):      
+def export_results(test_df, predictions, results_path, results_file_prefix, run_id):
     test_df["prediction"] = predictions
-    results_df = test_df.sort_values(by=["topic_id", "prediction"], ascending=False)
+    results_df = test_df.sort_values(
+        by=["topic_id", "prediction"], ascending=False)
     with open(join(results_path, results_file_prefix + run_id), "w") as results_file:
         last_topic = ""
         for _, row in results_df.iterrows():
@@ -65,13 +68,14 @@ def export_results(test_df, predictions, results_path, results_file_prefix, run_
                 rank = 1
             if rank <= RESULTS_PER_CLAIM or RESULTS_PER_CLAIM == 0:
                 results_file.write("{}\t{}\t{:.15f}\t{}\n".format(row["topic_id"], row["tweet_id"],
-                    row["prediction"], run_id))
+                                                                  row["prediction"], run_id))
             rank = rank + 1
             last_topic = row["topic_id"]
 
 
 def get_sequences_from_dataset(train_df, test_df, clef_submission=0):
-    sequencer = Sequencer(train_df[TEXT_COLUMN], NUM_WORDS, tokenizer="nltk", lang="en")
+    sequencer = Sequencer(train_df[TEXT_COLUMN],
+                          NUM_WORDS, tokenizer="nltk", lang="en")
     word_index = sequencer.word_index
 
     print(f"Found {sequencer.unique_word_count} unique tokens.")
@@ -86,7 +90,8 @@ def get_sequences_from_dataset(train_df, test_df, clef_submission=0):
 
 
 def get_sequences_from_dataset_gf(train_df, test_df, clef_submission=0):
-    sequencer = Sequencer(train_df[TEXT_COLUMN], NUM_WORDS, tokenizer="nltk", lang="en")
+    sequencer = Sequencer(train_df[TEXT_COLUMN],
+                          NUM_WORDS, tokenizer="nltk", lang="en")
     word_index = sequencer.word_index
 
     print(f"Found {sequencer.unique_word_count} unique tokens.")
@@ -101,8 +106,10 @@ def get_sequences_from_dataset_gf(train_df, test_df, clef_submission=0):
     rel_train_3_seqs = sequencer.fit_on_text(train_df["rel_text_3"], SEQ_LEN)
     rel_test_3_seqs = sequencer.fit_on_text(test_df["rel_text_3"], SEQ_LEN)
 
-    train_seqs = np.concatenate((train_0_seqs, rel_train_1_seqs, rel_train_2_seqs, rel_train_3_seqs), axis=1)
-    test_seqs = np.concatenate((test_0_seqs, rel_test_1_seqs, rel_test_2_seqs, rel_test_3_seqs), axis=1)
+    train_seqs = np.concatenate(
+        (train_0_seqs, rel_train_1_seqs, rel_train_2_seqs, rel_train_3_seqs), axis=1)
+    test_seqs = np.concatenate(
+        (test_0_seqs, rel_test_1_seqs, rel_test_2_seqs, rel_test_3_seqs), axis=1)
 
     if clef_submission == 1:
         return train_seqs, train_df[LABEL_COLUMN].values, test_seqs, None, word_index
@@ -135,13 +142,19 @@ def get_text_only_dataset_with_graph_features(df, tweets_path, clef_submission=0
         row_dict["rel_text_3"] = ""
         if len(feature_nodes) > 0:
             row_dict["rel_tweet_id_1"] = feature_nodes[0]
-            row_dict["rel_text_1"] = df.loc[df["tweet_id"] == feature_nodes[0]]["tweet_text"].values[0]
+            rltx1 = df.loc[df["tweet_id"] ==
+                           feature_nodes[0]]["tweet_text"].values
+            row_dict["rel_text_1"] = rltx1[0] if len(rltx1) else ''
         if len(feature_nodes) > 1:
             row_dict["rel_tweet_id_2"] = feature_nodes[1]
-            row_dict["rel_text_2"] = df.loc[df["tweet_id"] == feature_nodes[1]]["tweet_text"].values[0]
+            rltx2 = df.loc[df["tweet_id"] ==
+                           feature_nodes[1]]["tweet_text"].values
+            row_dict["rel_text_2"] = rltx2[0] if len(rltx2) else ''
         if len(feature_nodes) > 2:
             row_dict["rel_tweet_id_3"] = feature_nodes[2]
-            row_dict["rel_text_3"] = df.loc[df["tweet_id"] == feature_nodes[2]]["tweet_text"].values[0]
+            rltx3 = df.loc[df["tweet_id"] ==
+                           feature_nodes[2]]["tweet_text"].values
+            row_dict["rel_text_3"] = rltx3[0] if len(rltx3) else ''
 
         result.append(row_dict)
     result_df = pd.DataFrame(result)
@@ -181,7 +194,8 @@ def clean_dataset(df, clef_submission=0):
 
 
 def get_embedding_layer(pretrained_embedding_path, word_index):
-    pretrained_np_embedding_path = pretrained_embedding_path.split(".")[0] + ".npy"
+    pretrained_np_embedding_path = pretrained_embedding_path.split(".")[
+        0] + ".npy"
 
     if path.exists(pretrained_np_embedding_path):
         embedding_matrix = np.load(pretrained_np_embedding_path)
@@ -230,12 +244,17 @@ def get_tfidf(train_df, test_df, clef_submission=0):
 
 def get_tfidf_gf(train_df, test_df, clef_submission=0):
     train_0_x, test_0_x = tfidf_transform(train_df, test_df, TEXT_COLUMN)
-    rel_train_1_x, rel_test_1_x = tfidf_transform(train_df, test_df, "rel_text_1")
-    rel_train_2_x, rel_test_2_x = tfidf_transform(train_df, test_df, "rel_text_2")
-    rel_train_3_x, rel_test_3_x = tfidf_transform(train_df, test_df, "rel_text_3")
+    rel_train_1_x, rel_test_1_x = tfidf_transform(
+        train_df, test_df, "rel_text_1")
+    rel_train_2_x, rel_test_2_x = tfidf_transform(
+        train_df, test_df, "rel_text_2")
+    rel_train_3_x, rel_test_3_x = tfidf_transform(
+        train_df, test_df, "rel_text_3")
 
-    train_x = np.concatenate((train_0_x, rel_train_1_x, rel_train_2_x, rel_train_3_x), axis=1)
-    test_x = np.concatenate((test_0_x, rel_test_1_x, rel_test_2_x, rel_test_3_x), axis=1)
+    train_x = np.concatenate(
+        (train_0_x, rel_train_1_x, rel_train_2_x, rel_train_3_x), axis=1)
+    test_x = np.concatenate(
+        (test_0_x, rel_test_1_x, rel_test_2_x, rel_test_3_x), axis=1)
 
     train_y = train_df.pop(LABEL_COLUMN).values
     if clef_submission == 1:

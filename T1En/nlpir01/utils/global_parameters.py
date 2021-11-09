@@ -1,7 +1,122 @@
+from pathlib import Path
+import os
 RESOURCES_PATH = "nlpir01/resources"
 EMBEDDINGS_FILE = "glove_twitter_27B_200d.txt"
 RESULTS_PATH = "nlpir01/results"
 RESULTS_FILE_PREFIX = "T1-EN-"
+
+
+PROJECT_PATH = Path(os.path.dirname(__file__))
+INPUT_DATA_PATH = os.path.join(
+    PROJECT_PATH.parent.parent.parent.parent.absolute(),
+    'data'
+)
+INPUT_DATA_PATHS = {
+    'covid_tweets': {
+        'train': {
+            'label': 'train',
+            'tfpath': os.path.join(
+                INPUT_DATA_PATH,
+                'covid_tweets',
+                'train',
+                'v1',
+                'training.tsv',
+            ),
+            'v2jfpath': os.path.join(
+                INPUT_DATA_PATH,
+                'covid_tweets',
+                'train',
+                'v2',
+                'training_v2.json'
+            )
+        },
+        'dev': {
+            'label': 'dev',
+            'tfpath': os.path.join(
+                INPUT_DATA_PATH,
+                'covid_tweets',
+                'train',
+                'v1',
+                'dev.tsv',
+            ),
+            'v2tfpath': os.path.join(
+                INPUT_DATA_PATH,
+                'covid_tweets',
+                'train',
+                'v2',
+                'dev_v2.tsv'
+            ),
+            'v2jfpath': os.path.join(
+                INPUT_DATA_PATH,
+                'covid_tweets',
+                'train',
+                'v2',
+                'dev_v2.json'
+            )
+        },
+        'test': {
+            'label': 'test',
+            'tfpath': os.path.join(
+                INPUT_DATA_PATH,
+                'covid_tweets',
+                'test',
+                'test-input.tsv',
+            ),
+            'jfpath': os.path.join(
+                INPUT_DATA_PATH,
+                'covid_tweets',
+                'test',
+                'test-input.json',
+            ),
+        },
+    },
+    'political_debates': {
+        'folderpath': os.path.join(INPUT_DATA_PATH, 'political_debates'),
+        # 'embpath': os.path.join(BERT_EMB_PATH, 'political_debates'),
+        'train': {
+            'label': 'train',
+            'folderpath': os.path.join(
+                INPUT_DATA_PATH,
+                'political_debates',
+                'training'
+            ),
+            'filepath': os.path.join(
+                INPUT_DATA_PATH,
+                'political_debates',
+                'training',
+                'train_combined.tsv'
+            ),
+        },
+        'test_no_annotation': {
+            'label': 'test_no_annotation',
+            'folderpath': os.path.join(
+                INPUT_DATA_PATH,
+                'political_debates',
+                'test_no_annotation'
+            ),
+            'filepath': os.path.join(
+                INPUT_DATA_PATH,
+                'political_debates',
+                'test_no_annotation',
+                'test_no_annotation_combined.tsv'
+            )
+        },
+        'test': {
+            'label': 'test',
+            'folderpath': os.path.join(
+                INPUT_DATA_PATH,
+                'political_debates',
+                'test'
+            ),
+            'filepath': os.path.join(
+                INPUT_DATA_PATH,
+                'political_debates',
+                'test',
+                'test_combined.tsv'
+            )
+        }
+    }
+}
 
 TRAINING_TWEETS_PATH = "data/training_v2.json"
 TRAINING_PATH = "data/training_v2.tsv"
