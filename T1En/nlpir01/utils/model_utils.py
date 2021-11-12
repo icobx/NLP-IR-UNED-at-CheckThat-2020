@@ -10,7 +10,7 @@ from utils.tweets_graph import TweetsGraph
 from utils.text_sequencer import Sequencer
 from utils.global_parameters import RESOURCES_PATH, RESULTS_PATH, SEQ_LEN, TEXT_COLUMN
 from utils.global_parameters import LABEL_COLUMN, RESULTS_PER_CLAIM, NUM_WORDS
-from utils.global_parameters import EMBEDDING_SIZE, BATCH_SIZE, EPOCHS
+from utils.global_parameters import EMBEDDING_SIZE, BATCH_SIZE, EPOCHS, COL_NAMES
 
 
 def run_model_binary(model, x_train, y_train, x_test, y_test,
@@ -59,6 +59,9 @@ def class_of(binary_raw_value):
 
 def export_results(test_df, predictions, results_path, results_file_prefix, run_id):
     test_df["prediction"] = predictions
+    if 'topic_id' not in test_df.columns:
+        test_df['topic_id'] = 'political_debates'
+
     results_df = test_df.sort_values(
         by=["topic_id", "prediction"], ascending=False)
     with open(join(results_path, results_file_prefix + run_id), "w") as results_file:
@@ -67,26 +70,28 @@ def export_results(test_df, predictions, results_path, results_file_prefix, run_
             if last_topic != row["topic_id"]:
                 rank = 1
             if rank <= RESULTS_PER_CLAIM or RESULTS_PER_CLAIM == 0:
-                results_file.write("{}\t{}\t{:.15f}\t{}\n".format(row["topic_id"], row["tweet_id"],
+                results_file.write("{}\t{}\t{:.15f}\t{}\n".format(row["topic_id"], row["id"],
                                                                   row["prediction"], run_id))
             rank = rank + 1
             last_topic = row["topic_id"]
 
 
-def get_sequences_from_dataset(train_df, test_df, clef_submission=0):
-    sequencer = Sequencer(train_df[TEXT_COLUMN],
+def get_sequences_from_dataset(dataset, train_df, test_df, clef_submission=0):
+    text_col, label_col = COL_NAMES[dataset].values()
+
+    sequencer = Sequencer(train_df[text_col],
                           NUM_WORDS, tokenizer="nltk", lang="en")
     word_index = sequencer.word_index
 
     print(f"Found {sequencer.unique_word_count} unique tokens.")
 
-    train_seqs = sequencer.fit_on_text(train_df[TEXT_COLUMN], SEQ_LEN)
-    test_seqs = sequencer.fit_on_text(test_df[TEXT_COLUMN], SEQ_LEN)
+    train_seqs = sequencer.fit_on_text(train_df[text_col], SEQ_LEN)
+    test_seqs = sequencer.fit_on_text(test_df[text_col], SEQ_LEN)
 
     if clef_submission == 1:
-        return train_seqs, train_df[LABEL_COLUMN].values, test_seqs, None, word_index
+        return train_seqs, train_df[label_col].values, test_seqs, None, word_index
     else:
-        return train_seqs, train_df[LABEL_COLUMN].values, test_seqs, test_df[LABEL_COLUMN].values, word_index
+        return train_seqs, train_df[label_col].values, test_seqs, test_df[label_col].values, word_index
 
 
 def get_sequences_from_dataset_gf(train_df, test_df, clef_submission=0):
@@ -211,6 +216,7 @@ def get_embedding_layer(pretrained_embedding_path, word_index):
         embeddings_file.close()
 
         embedding_matrix = np.zeros((len(word_index) + 1, coefs.shape[0]))
+
         for word, i in word_index.items():
             embedding_vector = embeddings_index.get(word)
             if embedding_vector is not None:
@@ -232,13 +238,15 @@ def tfidf_transform(train_df, test_df, text_column):
     return train_x, test_x
 
 
-def get_tfidf(train_df, test_df, clef_submission=0):
-    train_x, test_x = tfidf_transform(train_df, test_df, TEXT_COLUMN)
-    train_y = train_df.pop(LABEL_COLUMN).values
+def get_tfidf(dataset, train_df, test_df, clef_submission=0):
+    label_col = COL_NAMES[dataset]['labelc']
+    text_col = COL_NAMES[dataset]['textc']
+    train_x, test_x = tfidf_transform(train_df, test_df, text_col)
+    train_y = train_df.pop(label_col).values
     if clef_submission == 1:
         test_y = None
     else:
-        test_y = test_df.pop(LABEL_COLUMN).values
+        test_y = test_df.pop(label_col).values
     return train_x, train_y, test_x, test_y
 
 

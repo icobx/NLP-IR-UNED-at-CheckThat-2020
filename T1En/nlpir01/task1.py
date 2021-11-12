@@ -60,10 +60,29 @@ def build_subplot(model_label, history_dict):
     plt.legend()
 
 
-def get_data(graph_features=0, use_embeddings=1, clef_submission=0):
-    paths = INPUT_DATA_PATHS['covid_tweets']
+def split_train_test(train, val_size=0.25, rs=22):
+    from sklearn.model_selection import train_test_split
+    index = train['id'].values
+
+    _, vindex = train_test_split(
+        index,
+        test_size=val_size,
+        random_state=rs
+    )
+
+    mask = train['id'].isin(vindex)
+    return train[~mask], train[mask]
+
+
+def get_data(dataset, graph_features=0, use_embeddings=1, clef_submission=0):
+    print('hello')
+    paths = INPUT_DATA_PATHS[dataset]
     train_df = pd.read_csv(paths['train']['tfpath'], sep='\t')
-    test_df = pd.read_csv(paths['dev']['tfpath'], sep='\t')
+    if dataset == 'covid_tweets':
+        test_df = pd.read_csv(paths['dev']['tfpath'], sep='\t')
+    else:
+        train_df, test_df = split_train_test(train_df)
+
     # hard copy because label is extracted later from test_df
     train_sub_df = train_df.copy()
     test_sub_df = pd.read_csv(paths['test']['tfpath'], sep='\t')
@@ -74,16 +93,16 @@ def get_data(graph_features=0, use_embeddings=1, clef_submission=0):
     if graph_features == 0:
         if use_embeddings == 1:
             x_train, y_train, x_test, y_test, word_index = get_sequences_from_dataset(
-                train_df, test_df, clef_submission=0)
+                dataset, train_df, test_df, clef_submission=0)
             if clef_submission == 1:
                 _, _, x_test_sub, _, _ = get_sequences_from_dataset(
-                    train_sub_df, test_sub_df, clef_submission=1)
+                    dataset, train_sub_df, test_sub_df, clef_submission=1)
         else:
             x_train, y_train, x_test, y_test = get_tfidf(
-                train_df, test_df, clef_submission=0)
+                dataset, train_df, test_df, clef_submission=0)
             if clef_submission == 1:
                 _, _, x_test_sub, _ = get_tfidf(
-                    train_sub_df, test_sub_df, clef_submission=1)
+                    dataset, train_sub_df, test_sub_df, clef_submission=1)
 
         input_length = x_train[:].shape[1]
 
@@ -128,7 +147,7 @@ def get_data(graph_features=0, use_embeddings=1, clef_submission=0):
     return input_length, x_train, y_train, x_test, y_test, test_df, word_index, x_test_sub, test_sub_df
 
 
-def run_task1(models_to_run, graph_features=1, embeddings=0, verbose=0):
+def run_task1(models_to_run, graph_features=1, embeddings=0, verbose=0, dataset='covid_tweets'):
 
     prepare_folders_and_files()
 
@@ -157,14 +176,20 @@ def run_task1(models_to_run, graph_features=1, embeddings=0, verbose=0):
     TEST_LABEL = "_only_for_testing"
 
     input_length, x_train, y_train, x_test, y_test, test_df, word_index, x_test_sub, test_sub_df = get_data(
-        graph_features, use_embeddings=1, clef_submission=1)
+        dataset, graph_features, use_embeddings=1, clef_submission=1)
     input_length2, x_train2, y_train2, x_test2, y_test2, test_df, _, x_test_sub2, test_sub_df = get_data(
-        graph_features, use_embeddings=0, clef_submission=1)
+        dataset, graph_features, use_embeddings=0, clef_submission=1)
 
     embedding_matrix = None
     if embeddings == 1:
         embedding_matrix = get_embedding_layer(
-            os.path.join(RESOURCES_PATH, EMBEDDINGS_FILE), word_index)
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'resources',
+                EMBEDDINGS_FILE  # TODO: make this customizable
+            ),
+            word_index
+        )
 
     dev_path = INPUT_DATA_PATHS['covid_tweets']['dev']['v2tfpath']
     if 1 in models_to_run:
@@ -178,6 +203,7 @@ def run_task1(models_to_run, graph_features=1, embeddings=0, verbose=0):
             model1, x_test, y_test, verbose=verbose)
         class_predictions1, raw_predictions1 = predict_model_binary(
             model1, x_test)
+
         export_results(test_df, raw_predictions1, RESULTS_PATH,
                        RESULTS_FILE_PREFIX, MODEL1_SHORT_LABEL + TEST_LABEL)
         MODEL_RESULT_PATH = join(
@@ -469,13 +495,17 @@ if __name__ == "__main__":
     starting_time = datetime.now()
 
     if args.check_all == 0:
-        run_task1(args.models, embeddings=args.embeddings,
-                  graph_features=args.graph)
+
+        run_task1(args.models, embeddings=1,
+                  graph_features=0, dataset='political_debates')
+        # run_task1(args.models, embeddings=args.embeddings,
+        #           graph_features=args.graph, dataset='political_debates')
     else:
-        run_task1(args.models, embeddings=1, graph_features=1)
-        run_task1(args.models, embeddings=1, graph_features=0)
-        run_task1(args.models, embeddings=0, graph_features=1)
-        run_task1(args.models, embeddings=0, graph_features=0)
+        # run_task1(args.models, embeddings=1, graph_features=1)
+        run_task1(dataset='political_debates', models_to_run=args.models,
+                  embeddings=1, graph_features=0)
+        # run_task1(args.models, embeddings=0, graph_features=1)
+        # run_task1(args.models, embeddings=0, graph_features=0)
 
     ending_time = datetime.now()
     print("Total time:", ending_time - starting_time)

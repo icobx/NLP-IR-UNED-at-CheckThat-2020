@@ -80,7 +80,7 @@ INPUT_DATA_PATHS = {
                 'political_debates',
                 'training'
             ),
-            'filepath': os.path.join(
+            'tfpath': os.path.join(
                 INPUT_DATA_PATH,
                 'political_debates',
                 'training',
@@ -94,7 +94,7 @@ INPUT_DATA_PATHS = {
                 'political_debates',
                 'test_no_annotation'
             ),
-            'filepath': os.path.join(
+            'tfpath': os.path.join(
                 INPUT_DATA_PATH,
                 'political_debates',
                 'test_no_annotation',
@@ -108,7 +108,7 @@ INPUT_DATA_PATHS = {
                 'political_debates',
                 'test'
             ),
-            'filepath': os.path.join(
+            'tfpath': os.path.join(
                 INPUT_DATA_PATH,
                 'political_debates',
                 'test',
@@ -129,6 +129,17 @@ TEST_PATH = "test-input/test-input.tsv"
 
 
 RESULTS_PER_CLAIM = 0
+
+COL_NAMES = {
+    'covid_tweets': {
+        'textc': 'tweet_text',
+        'labelc': 'check_worthiness',
+    },
+    'political_debates': {
+        'textc': 'content',
+        'labelc': 'worthy',
+    }
+}
 
 TEXT_COLUMN = "tweet_text"
 # -v1
