@@ -2,7 +2,7 @@ import os
 from os.path import join, dirname
 from os import listdir
 
-from utils.global_parameters import RESULTS_PATH, EMBEDDINGS_FILE, RESOURCES_PATH
+from utils.global_parameters import RESULTS_PATH, EMBEDDINGS_FILE_CT, EMBEDDINGS_FILE_PD, RESOURCES_PATH
 
 
 def get_file_with_path_list(path):
@@ -11,10 +11,13 @@ def get_file_with_path_list(path):
     return all_files
 
 
-def prepare_folders_and_files():
+def prepare_folders_and_files(dataset='covid_tweets'):
+    emb_file = EMBEDDINGS_FILE_CT if dataset == 'covid_tweets' else EMBEDDINGS_FILE_PD
+
     if not os.path.exists(RESULTS_PATH):
         os.makedirs(RESULTS_PATH)
-  
-    embeddings_binary = os.path.join(RESOURCES_PATH, EMBEDDINGS_FILE).split(".")[0] + ".npy"
+
+    embeddings_binary = os.path.join(
+        RESOURCES_PATH, emb_file).split(".")[0] + ".npy"
     if os.path.exists(embeddings_binary):
         os.remove(embeddings_binary)

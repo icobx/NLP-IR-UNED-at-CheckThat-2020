@@ -62,6 +62,9 @@ def export_results(test_df, predictions, results_path, results_file_prefix, run_
     if 'topic_id' not in test_df.columns:
         test_df['topic_id'] = 'political_debates'
 
+    if test_df.loc[0, 'topic_id'] == 'covid-19':
+        test_df.rename(columns={'tweet_id': 'id'}, inplace=True)
+
     results_df = test_df.sort_values(
         by=["topic_id", "prediction"], ascending=False)
     with open(join(results_path, results_file_prefix + run_id), "w") as results_file:
@@ -69,6 +72,7 @@ def export_results(test_df, predictions, results_path, results_file_prefix, run_
         for _, row in results_df.iterrows():
             if last_topic != row["topic_id"]:
                 rank = 1
+
             if rank <= RESULTS_PER_CLAIM or RESULTS_PER_CLAIM == 0:
                 results_file.write("{}\t{}\t{:.15f}\t{}\n".format(row["topic_id"], row["id"],
                                                                   row["prediction"], run_id))
@@ -204,6 +208,7 @@ def get_embedding_layer(pretrained_embedding_path, word_index):
 
     if path.exists(pretrained_np_embedding_path):
         embedding_matrix = np.load(pretrained_np_embedding_path)
+        print('in get_embedding_layer:', embedding_matrix.shape)
     else:
         print("Loading embeddings...")
         embeddings_index = {}

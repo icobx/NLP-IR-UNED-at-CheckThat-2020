@@ -1,7 +1,8 @@
 from pathlib import Path
 import os
 RESOURCES_PATH = "nlpir01/resources"
-EMBEDDINGS_FILE = "glove_twitter_27B_200d.txt"
+EMBEDDINGS_FILE_CT = "glove_twitter_27B_200d.txt"
+EMBEDDINGS_FILE_PD = "glove_42B_300d.txt"
 RESULTS_PATH = "nlpir01/results"
 RESULTS_FILE_PREFIX = "T1-EN-"
 
@@ -114,7 +115,12 @@ INPUT_DATA_PATHS = {
                 'test',
                 'test_combined.tsv'
             )
-        }
+        },
+        'dev': os.path.join(
+            INPUT_DATA_PATH,
+            'political_debates',
+            'val_combined.tsv'
+        )
     }
 }
 

@@ -18,7 +18,9 @@ def get_ffnn_emb_model(
     sequence_input = Input(shape=(input_length,), dtype="int32")
     if embedding_matrix is None:
         embedded_sequences = Embedding(
-            NUM_WORDS, EMBEDDING_SIZE)(sequence_input)
+            NUM_WORDS,
+            EMBEDDING_SIZE
+        )(sequence_input)
     else:
         embedded_sequences = Embedding(
             len(word_index) + 1,

@@ -1,4 +1,3 @@
-from format_checker.main import check_format
 import pdb
 import logging
 import argparse
@@ -7,13 +6,13 @@ import os
 import sys
 sys.path.append('.')
 """
-Scoring of Task 5 with the metrics Average Precision, R-Precision, P@N, RR@N. 
+Scoring of Task 5 with the metrics Average Precision, R-Precision, P@N, RR@N.
 """
 
 logging.basicConfig(format='%(levelname)s : %(message)s', level=logging.INFO)
 
 
-MAIN_THRESHOLDS = [1, 3, 5, 10, 20, 50]
+MAIN_THRESHOLDS = [1, 3, 5, 10, 20, 30, 50]
 
 
 def _read_gold_and_pred(gold_fpath, pred_fpath):
@@ -24,49 +23,32 @@ def _read_gold_and_pred(gold_fpath, pred_fpath):
     :return: {line_number:label} dict; list with (line_number, score) tuples.
     """
 
-    # logging.info("Reading gold predictions from file {}".format(gold_fpath))
-
     gold_labels = {}
     with open(gold_fpath, encoding='utf-8') as gold_f:
-        is_political_debates = '_combined.tsv' in gold_fpath
         gold_f.readline()
         for line_res in gold_f:
-            if is_political_debates:
-                i, id, src, content, label = line_res.strip().split('\t')
-            else:
-                (topic_id, id, tweet_url, tweet_text, claim, label) = line_res.strip().split(
-                    '\t')  # process the line from the res file
-            # if topic_id == 'topic_id':
-            #     continue
+            (topic_id, id, tweet_url, tweet_text, claim, label) = line_res.strip().split(
+                '\t')  # process the line from the res file
             # label = check_worthiness
             gold_labels[int(id)] = int(label)
-
-    # logging.info('Reading predicted ranking order from file {}'.format(pred_fpath))
 
     line_score = []
     with open(pred_fpath) as pred_f:
         for line in pred_f:
-            topic_id, id, score, run_id = line.split('\t')
-            id = int(id.strip())
+            _, tweet_id, score, _ = line.split('\t')
+            tweet_id = int(tweet_id.strip())
             score = float(score.strip())
 
-            if id not in gold_labels:
-                logging.error('No such tweet_id: {} in gold file!'.format(id))
+            if tweet_id not in gold_labels:
+                logging.error(
+                    'No such tweet_id: {} in gold file!'.format(tweet_id))
                 quit()
-            line_score.append((id, score))
-
-    # if len(set(gold_labels).difference([tup[0] for tup in line_score])) != 0:
-    #     logging.error(
-    #         'The predictions do not match the lines from the gold file - missing or extra line_no')
-    #     raise ValueError(
-    #         'The predictions do not match the lines from the gold file - missing or extra line_no')
-
+            line_score.append((tweet_id, score))
     return gold_labels, line_score
 
 
 def _compute_average_precision(gold_labels, ranked_lines):
     """ Computes Average Precision. """
-
     precisions = []
     num_correct = 0
     num_positive = sum([1 if v == 1 else 0 for k, v in gold_labels.items()])
@@ -131,7 +113,8 @@ def evaluate(gold_fpath, pred_fpath, thresholds=None):
     avg_precision = _compute_average_precision(gold_labels, ranked_lines)
     reciprocal_rank = _compute_reciprocal_rank(gold_labels, ranked_lines)
     num_relevant = len({k for k, v in gold_labels.items() if v == 1})
-
+    if num_relevant > len(ranked_lines):
+        num_relevant = len(ranked_lines)
     return thresholds, precisions, avg_precision, reciprocal_rank, num_relevant
 
 
@@ -179,94 +162,96 @@ def print_metrics_info(line_separator):
     logging.info(line_separator)
 
 
-def validate_files(pred_files, gold_files):
-    if len(pred_files) != len(gold_files):
-        logging.error(
-            'Different number of gold files ({}) and pred files ({}) provided. Cannot score.'.format(
-                len(gold_files), len(pred_files)
-            )
-        )
-        return False
+def get_mean_values(gold_files, pred_files):
+    overall_precisions = [0.0] * len(MAIN_THRESHOLDS)
+    mean_r_precision = 0.0
+    mean_avg_precision = 0.0
+    mean_reciprocal_rank = 0.0
 
-    if len(pred_files) != len(set(pred_files)):
-        logging.error(
-            'Same pred file provided multiple times. The pred files should be for different debates.')
-        return False
+    for (pred_file, gold_file) in zip(pred_files, gold_files):
+        thresholds, precisions, avg_precision, reciprocal_rank, num_relevant = evaluate(
+            gold_file, pred_file)
+        threshold_precisions = [precisions[th - 1] for th in MAIN_THRESHOLDS]
+        r_precision = precisions[num_relevant - 1]
 
-    for pred_file in pred_files:
-        if not check_format(pred_file):
-            logging.error(
-                'Bad format for pred file {}. Cannot score.'.format(pred_file))
-            return False
+        for idx in range(0, len(MAIN_THRESHOLDS)):
+            overall_precisions[idx] += threshold_precisions[idx]
+        mean_r_precision += r_precision
+        mean_avg_precision += avg_precision
+        mean_reciprocal_rank += reciprocal_rank
 
-    return True
+    pred_files_count = len(pred_files)
+    if pred_files_count > 1:
+        overall_precisions = [item * 1.0 /
+                              pred_files_count for item in overall_precisions]
+        mean_r_precision /= pred_files_count
+        mean_avg_precision /= pred_files_count
+        mean_reciprocal_rank /= pred_files_count
+
+    return overall_precisions, mean_avg_precision, mean_r_precision, mean_reciprocal_rank
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--gold_file_path",
-        help="Single string containing a comma separated list of paths to files with gold annotations.",
-        type=str,
-        required=True
-    )
-    parser.add_argument(
-        "--pred_file_path",
-        help="Single string containing a comma separated list of paths to files with ranked line_numbers.",
-        type=str,
-        required=True
-    )
-    args = parser.parse_args()
 
-    pred_files = [pred_file.strip()
-                  for pred_file in args.pred_file_path.split(",")]
-    gold_files = [gold_file.strip()
-                  for gold_file in args.gold_file_path.split(",")]
-    line_separator = '=' * 120
+    print(get_mean_values("", ""))
 
-    if validate_files(pred_files, gold_files):
-        logging.info("Started evaluating results for Task 5 ...")
-        overall_precisions = [0.0] * len(MAIN_THRESHOLDS)
-        mean_r_precision = 0.0
-        mean_avg_precision = 0.0
-        mean_reciprocal_rank = 0.0
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument(
+    #     "--gold_file_path",
+    #     help="Single string containing a comma separated list of paths to files with gold annotations.",
+    #     type=str,
+    #     required=True
+    # )
+    # parser.add_argument(
+    #     "--pred_file_path",
+    #     help="Single string containing a comma separated list of paths to files with ranked line_numbers.",
+    #     type=str,
+    #     required=True
+    # )
+    # args = parser.parse_args()
 
-        for (pred_file, gold_file) in zip(pred_files, gold_files):
-            thresholds, precisions, avg_precision, reciprocal_rank, num_relevant = evaluate(
-                gold_file, pred_file)
-            threshold_precisions = [precisions[th - 1]
-                                    for th in MAIN_THRESHOLDS]
-            r_precision = precisions[num_relevant - 1]
+    # pred_files = [pred_file.strip() for pred_file in args.pred_file_path.split(",")]
+    # gold_files = [gold_file.strip() for gold_file in args.gold_file_path.split(",")]
 
-            for idx in range(0, len(MAIN_THRESHOLDS)):
-                overall_precisions[idx] += threshold_precisions[idx]
-            mean_r_precision += r_precision
-            mean_avg_precision += avg_precision
-            mean_reciprocal_rank += reciprocal_rank
+    # pred_files = [pred_file.strip() for pred_file in pred_file_path.split(",")]
+    # gold_files = [gold_file.strip() for gold_file in gold_file_path.split(",")]
 
-            filename = os.path.basename(pred_file)
-            logging.info('{:=^120}'.format(
-                ' RESULTS for {} '.format(filename)))
-            print_single_metric('AVERAGE PRECISION:', avg_precision)
-            print_single_metric('RECIPROCAL RANK:', reciprocal_rank)
-            print_single_metric(
-                'R-PRECISION (R={}):'.format(num_relevant), r_precision)
-            print_thresholded_metric(
-                'PRECISION@N:', MAIN_THRESHOLDS, threshold_precisions)
+    # line_separator = '=' * 120
 
-        debate_count = len(pred_files)
-        if debate_count > 1:
-            overall_precisions = [item * 1.0 /
-                                  debate_count for item in overall_precisions]
-            mean_r_precision /= debate_count
-            mean_avg_precision /= debate_count
-            mean_reciprocal_rank /= debate_count
-            logging.info('{:=^120}'.format(' AVERAGED RESULTS '))
-            print_single_metric(
-                'MEAN AVERAGE PRECISION (MAP):', mean_avg_precision)
-            print_single_metric('MEAN RECIPROCAL RANK:', mean_reciprocal_rank)
-            print_single_metric('MEAN R-PRECISION:', mean_r_precision)
-            print_thresholded_metric(
-                'MEAN PRECISION@N:', MAIN_THRESHOLDS, overall_precisions)
+    # logging.info("Started evaluating results for Task 5 ...")
+    # overall_precisions = [0.0] * len(MAIN_THRESHOLDS)
+    # mean_r_precision = 0.0
+    # mean_avg_precision = 0.0
+    # mean_reciprocal_rank = 0.0
 
-        print_metrics_info(line_separator)
+    # for (pred_file, gold_file) in zip(pred_files, gold_files):
+    #     thresholds, precisions, avg_precision, reciprocal_rank, num_relevant = evaluate(gold_file, pred_file)
+    #     threshold_precisions = [precisions[th - 1] for th in MAIN_THRESHOLDS]
+    #     r_precision = precisions[num_relevant - 1]
+
+    #     for idx in range(0, len(MAIN_THRESHOLDS)):
+    #         overall_precisions[idx] += threshold_precisions[idx]
+    #     mean_r_precision += r_precision
+    #     mean_avg_precision += avg_precision
+    #     mean_reciprocal_rank += reciprocal_rank
+
+    #     filename = os.path.basename(pred_file)
+    #     logging.info('{:=^120}'.format(' RESULTS for {} '.format(filename)))
+    #     print_single_metric('AVERAGE PRECISION:', avg_precision)
+    #     print_single_metric('RECIPROCAL RANK:', reciprocal_rank)
+    #     print_single_metric('R-PRECISION (R={}):'.format(num_relevant), r_precision)
+    #     print_thresholded_metric('PRECISION@N:', MAIN_THRESHOLDS, threshold_precisions)
+
+    # debate_count = len(pred_files)
+    # if debate_count > 1:
+    #     overall_precisions = [item * 1.0 / debate_count for item in overall_precisions]
+    #     mean_r_precision /= debate_count
+    #     mean_avg_precision /= debate_count
+    #     mean_reciprocal_rank /= debate_count
+    #     logging.info('{:=^120}'.format(' AVERAGED RESULTS '))
+    #     print_single_metric('MEAN AVERAGE PRECISION (MAP):', mean_avg_precision)
+    #     print_single_metric('MEAN RECIPROCAL RANK:', mean_reciprocal_rank)
+    #     print_single_metric('MEAN R-PRECISION:', mean_r_precision)
+    #     print_thresholded_metric('MEAN PRECISION@N:', MAIN_THRESHOLDS, overall_precisions)
+
+    # print_metrics_info(line_separator)
