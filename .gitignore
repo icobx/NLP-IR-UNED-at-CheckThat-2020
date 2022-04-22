@@ -8,6 +8,9 @@ T1Ar/nlpir01/results/gold/*
 T1Ar/nlpir01/results/pred/*
 T1Ar/nlpir01/results/T1-AR*
 
+.ipynb_checkpoints/*
+utils/.ipynb_checkpoints/*
+
 T1En/*
 !T1En/nlpir01
 !T1En/README.md
