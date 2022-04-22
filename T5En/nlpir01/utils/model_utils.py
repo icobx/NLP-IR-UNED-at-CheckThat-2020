@@ -16,7 +16,7 @@ from utils.global_parameters import NUM_WORDS, SEQ_LEN, EMBEDDING_SIZE
 
 
 def run_model(model, x_train, y_train, train_df, test_debates, test_path, results_path, test1_df, prediction_prefix,
-    batch_size=BATCH_SIZE, epochs=EPOCHS,verbose=0):
+              batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
 
     history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.2, verbose=verbose)
     history_dict = history.history
@@ -42,7 +42,7 @@ def run_model(model, x_train, y_train, train_df, test_debates, test_path, result
     return loss, accuracy, class_predictions, y_test1, history_dict
 
 
-def fit_model(model, x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS,verbose=0):
+def fit_model(model, x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
     history = model.fit(x_train, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.2, verbose=verbose)
     history_dict = history.history
     return model, history_dict
@@ -71,9 +71,10 @@ def evaluate_model(model, train_df, test1_df, verbose=0):
 
 
 def run_model_rid(model, x_train_rid, y_train, train_df, test_debates, test_path, results_path, test1_df, prediction_prefix,
-    batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
+                  batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
 
-    history = model.fit(x_train_rid, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.2, verbose=verbose)
+    history = model.fit(x_train_rid, y_train, batch_size=batch_size,
+                        epochs=epochs, validation_split=0.2, verbose=verbose)
     history_dict = history.history
 
     # test1_df only to check class prediction accuracy
@@ -124,10 +125,11 @@ def evaluate_model_rid(model, train_df, test1_df, verbose=0):
 
 
 def run_model_text(model, x_train_text, y_train, train_df, test_debates, test_path, results_path, test1_df,
-    prediction_prefix, train_tiv_fit, train_pos_tiv_fit,
-    batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
+                   prediction_prefix, train_tiv_fit, train_pos_tiv_fit,
+                   batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=0):
 
-    history = model.fit(x_train_text, y_train, batch_size=batch_size, epochs=epochs, validation_split=0.2, verbose=verbose)
+    history = model.fit(x_train_text, y_train, batch_size=batch_size,
+                        epochs=epochs, validation_split=0.2, verbose=verbose)
     history_dict = history.history
 
     # test1_df only to check class prediction accuracy
@@ -154,7 +156,7 @@ def run_model_text(model, x_train_text, y_train, train_df, test_debates, test_pa
 
 
 def predict_model_text(model, train_df, test_debates, test_path, results_path, prediction_prefix,
-    train_tiv_fit, train_pos_tiv_fit):
+                       train_tiv_fit, train_pos_tiv_fit):
     # ranking predictions on all debates
     for test_file_name in test_debates:
         test_df = get_dataframe_from_file(join(test_path, test_file_name), COL_NAMES)
@@ -214,12 +216,15 @@ def get_sequences_from_dataset_keras(train_df, test_df):
 
 
 def get_rid_counts_from_dataset(train_df, test_df):
+    import os
     sequencer = Sequencer(train_df[TEXT_COLUMN], NUM_WORDS)
 
     train_tokens = sequencer.get_words(train_df[TEXT_COLUMN])
     test_tokens = sequencer.get_words(test_df[TEXT_COLUMN])
 
-    rid_count_extractor = RIDCountsExtractor("nlpir01/resources/rid_en.dic")
+    rid_count_extractor = RIDCountsExtractor(
+        "/Users/icobx/Documents/skola/dp/code/NLP-IR-UNED-at-CheckThat-2020/T5En/nlpir01/resources/rid_en.dic"
+    )
     _, _, train_rid_percentages = rid_count_extractor.get_rid_counts_list(train_tokens)
     _, _, test_rid_percentages = rid_count_extractor.get_rid_counts_list(test_tokens)
 
@@ -263,19 +268,19 @@ def get_train_text_features(train_df, oversampling=0):
 
 def get_test_text_features(test_df, train_tiv_fit, train_pos_tiv_fit):
 
-        test_1_x = train_tiv_fit.transform(test_df["text"]).toarray()
+    test_1_x = train_tiv_fit.transform(test_df["text"]).toarray()
 
-        # --- tf-idf pos features ---
-        test_pos_df = get_pos_df(test_df)
-        test_2_x = train_pos_tiv_fit.transform(test_pos_df["text_pos"]).toarray()
+    # --- tf-idf pos features ---
+    test_pos_df = get_pos_df(test_df)
+    test_2_x = train_pos_tiv_fit.transform(test_pos_df["text_pos"]).toarray()
 
-        # --- attribute-based language features ---
-        test_3_x = get_feature_matrix(test_df["text"], test_1_x.shape[0]).toarray()
+    # --- attribute-based language features ---
+    test_3_x = get_feature_matrix(test_df["text"], test_1_x.shape[0]).toarray()
 
-        # --- concatenate matrix ---
-        test_x = np.hstack((test_1_x, test_2_x, test_3_x))
+    # --- concatenate matrix ---
+    test_x = np.hstack((test_1_x, test_2_x, test_3_x))
 
-        return test_x
+    return test_x
 
 
 def get_embedding_layer(pretrained_embedding_path, word_index):

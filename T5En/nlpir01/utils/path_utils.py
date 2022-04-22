@@ -32,7 +32,8 @@ def get_file_with_path_list(path):
 
 
 def get_file_list(path):
-    all_files = [file_name for file_name in listdir(path)]
+    # all_files = [file_name for file_name in listdir(path)]
+    all_files = [file_name for file_name in listdir(path) if '_combined.tsv' not in file_name]
     all_files.sort()
     return all_files
 
@@ -51,6 +52,6 @@ def prepare_folders_and_files():
     submission_results_path = get_full_path(SUBMISSION_RESULTS_PATH)
     if not os.path.exists(submission_results_path):
         os.makedirs(submission_results_path)
-    
+
     if not os.path.exists(SUMMARY_DATA_PATH):
         os.makedirs(SUMMARY_DATA_PATH)

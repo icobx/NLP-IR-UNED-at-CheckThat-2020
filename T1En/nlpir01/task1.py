@@ -512,10 +512,10 @@ if __name__ == "__main__":
 
     if args.check_all == 0:
 
-        # run_task1(args.models, embeddings=1,
-        #           graph_features=0, dataset='covid_tweets')
-        run_task1(args.models, embeddings=args.embeddings,
-                  graph_features=args.graph, dataset='political_debates')
+        run_task1(args.models, embeddings=1,
+                  graph_features=0, dataset='covid_tweets')
+        # run_task1(args.models, embeddings=args.embeddings,
+        #           graph_features=args.graph, dataset='political_debates')
     else:
         # run_task1(args.models, embeddings=1, graph_features=1)
         # run_task1(dataset='covid_tweets', models_to_run=args.models,  # covid_tweets
